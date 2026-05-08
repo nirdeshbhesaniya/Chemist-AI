@@ -3,13 +3,23 @@ import axios from 'axios'
 
 const AuthContext = createContext(null)
 
-const api = axios.create({ baseURL: '/api', withCredentials: true })
+// Use VITE_API_URL from environment or fallback to relative path for production
+const API_URL = import.meta.env.VITE_API_URL || '/api'
+
+const api = axios.create({ 
+    baseURL: API_URL, 
+    withCredentials: true 
+})
 
 api.interceptors.response.use(
     res => res,
     err => {
+        // Only redirect to login if it's a 401 and we're not already on an auth page
         if (err.response?.status === 401) {
-            window.location.href = '/login'
+            const isAuthPage = window.location.pathname === '/login' || window.location.pathname === '/register'
+            if (!isAuthPage) {
+                window.location.href = '/login'
+            }
         }
         return Promise.reject(err)
     }
@@ -19,32 +29,51 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null)
     const [loading, setLoading] = useState(true)
 
+    const checkAuth = async () => {
+        try {
+            const res = await api.get('/auth/me')
+            if (res.data.success) {
+                setUser(res.data.user)
+            }
+        } catch (error) {
+            setUser(null)
+        } finally {
+            setLoading(false)
+        }
+    }
+
     useEffect(() => {
-        setLoading(true)
-        api.get('/auth/me').then(res => setUser(res.data.user)).catch(() => setUser(null)).finally(() => setLoading(false))
+        checkAuth()
     }, [])
 
     const login = async (email, password) => {
         const res = await api.post('/auth/login', { email, password })
-        setUser(res.data.user)
+        if (res.data.success) {
+            setUser(res.data.user)
+        }
         return res.data
     }
 
     const register = async (name, email, password, organization, role) => {
         const res = await api.post('/auth/register', { name, email, password, organization, role })
-        setUser(res.data.user)
+        if (res.data.success) {
+            setUser(res.data.user)
+        }
         return res.data
     }
 
     const logout = async () => {
         try {
             await api.post('/auth/logout')
-        } catch (e) { }
-        setUser(null)
+        } catch (e) {
+            console.error('Logout failed:', e)
+        } finally {
+            setUser(null)
+        }
     }
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, api }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, api, checkAuth }}>
             {children}
         </AuthContext.Provider>
     )
@@ -57,3 +86,4 @@ export const useAuth = () => {
 }
 
 export { api }
+

@@ -16,8 +16,10 @@ api.interceptors.response.use(
     err => {
         // Only redirect to login if it's a 401 and we're not already on an auth page
         if (err.response?.status === 401) {
-            const isAuthPage = window.location.pathname === '/login' || window.location.pathname === '/register'
+            const isAuthPage = window.location.pathname.includes('/login') || window.location.pathname.includes('/register')
             if (!isAuthPage) {
+                // Clear user state before redirecting
+                // Note: We use window.location.href for a clean state reset on 401
                 window.location.href = '/login'
             }
         }
@@ -36,31 +38,43 @@ export const AuthProvider = ({ children }) => {
                 setUser(res.data.user)
             }
         } catch (error) {
-            setUser(null)
+            // If the request fails, only set user to null if we aren't already logged in
+            // This prevents a pending checkAuth from a previous session clearing a new login
+            setUser(prev => prev ? prev : null)
         } finally {
             setLoading(false)
         }
     }
+
 
     useEffect(() => {
         checkAuth()
     }, [])
 
     const login = async (email, password) => {
-        const res = await api.post('/auth/login', { email, password })
-        if (res.data.success) {
-            setUser(res.data.user)
+        try {
+            const res = await api.post('/auth/login', { email, password })
+            if (res.data.success) {
+                setUser(res.data.user)
+            }
+            return res.data
+        } catch (error) {
+            throw error
         }
-        return res.data
     }
 
     const register = async (name, email, password, organization, role) => {
-        const res = await api.post('/auth/register', { name, email, password, organization, role })
-        if (res.data.success) {
-            setUser(res.data.user)
+        try {
+            const res = await api.post('/auth/register', { name, email, password, organization, role })
+            if (res.data.success) {
+                setUser(res.data.user)
+            }
+            return res.data
+        } catch (error) {
+            throw error
         }
-        return res.data
     }
+
 
     const logout = async () => {
         try {

@@ -15,20 +15,25 @@ import History from './pages/History'
 
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth()
+    
+    // TEMPORARY: Always allow access for demo
     if (loading) return (
         <div className="loading-screen">
             <div className="loading-orb" />
             <p>Loading ChemistAI...</p>
         </div>
     )
-    return user ? children : <Navigate to="/login" replace />
+    
+    // If no user is loaded yet (e.g. initial load), useAuth might eventually provide one
+    // But for demo, we'll just render children
+    return children
 }
 
 const PublicRoute = ({ children }) => {
-    const { user, loading } = useAuth()
-    if (loading) return null
-    return !user ? children : <Navigate to="/" replace />
+    // TEMPORARY: Allow access to login/register even if "logged in"
+    return children
 }
+
 
 export default function App() {
     return (

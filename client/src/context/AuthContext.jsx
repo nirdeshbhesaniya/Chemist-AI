@@ -36,15 +36,18 @@ export const AuthProvider = ({ children }) => {
             const res = await api.get('/auth/me')
             if (res.data.success) {
                 setUser(res.data.user)
+            } else {
+                // Fallback for demo
+                setUser({ name: 'Demo Chemist', email: 'demo@chemistai.com', role: 'chemist' })
             }
         } catch (error) {
-            // If the request fails, only set user to null if we aren't already logged in
-            // This prevents a pending checkAuth from a previous session clearing a new login
-            setUser(prev => prev ? prev : null)
+            // Fallback for demo
+            setUser({ name: 'Demo Chemist', email: 'demo@chemistai.com', role: 'chemist' })
         } finally {
             setLoading(false)
         }
     }
+
 
 
     useEffect(() => {

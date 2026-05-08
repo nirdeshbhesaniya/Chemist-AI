@@ -24,9 +24,14 @@ router.post('/register', [
 
         const user = await User.create({ name, email, password, organization, role });
         const token = generateToken(user._id);
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
         res.status(201).json({
-            token,
             user: { id: user._id, name: user.name, email: user.email, organization: user.organization, role: user.role }
         });
     } catch (err) { next(err); }
@@ -48,11 +53,23 @@ router.post('/login', [
         }
 
         const token = generateToken(user._id);
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
         res.json({
-            token,
             user: { id: user._id, name: user.name, email: user.email, organization: user.organization, role: user.role }
         });
     } catch (err) { next(err); }
+});
+
+// @POST /api/auth/logout
+router.post('/logout', (req, res) => {
+    res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+    res.json({ message: 'Logged out' });
 });
 
 // @GET /api/auth/me

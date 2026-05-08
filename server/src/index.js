@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -30,6 +32,7 @@ app.use('/api/', limiter);
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Logging
 if (process.env.NODE_ENV !== 'production') {
@@ -54,6 +57,18 @@ app.get('/api/health', (req, res) => {
 
 // Error handler
 app.use(errorHandler);
+
+// Serve client static files in production (Render will run build beforehand)
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.join(__dirname, '..', '..', 'client', 'dist');
+  app.use(express.static(clientBuildPath));
+
+  // Return client index.html for any non-API routes
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) return res.status(404).end();
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
+}
 
 const startServer = (port) => {
   const server = app.listen(port, () => {
